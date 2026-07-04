@@ -11,6 +11,7 @@
 
 #include <QString>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace xen {
@@ -21,9 +22,9 @@ namespace xen {
 class Confirmation {
 public:
     static Confirmation approve(const QString& humanReason) { return Confirmation(humanReason); }
-    const QString& reason() const { return m_reason; }
+    [[nodiscard]] const QString& reason() const { return m_reason; }
 private:
-    explicit Confirmation(const QString& r) : m_reason(r) {}
+    explicit Confirmation(QString  r) : m_reason(std::move(r)) {}
     QString m_reason;
 };
 

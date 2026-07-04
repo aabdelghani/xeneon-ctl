@@ -25,7 +25,7 @@
 namespace xen {
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent)
+    : QMainWindow(parent), m_device(new EdgeDevice(this)), m_ddc(new DdcClient(this))
 {
     setWindowTitle(QStringLiteral("XENEON CTL"));
     resize(1100, 640);
@@ -50,8 +50,6 @@ MainWindow::MainWindow(QWidget* parent)
     m_banner->setVisible(false);
     rightLay->addWidget(m_banner);
 
-    m_ddc = new DdcClient(this);
-
     m_pages = new QStackedWidget(right);
     m_pages->addWidget(buildHomePage());
     m_pages->addWidget(new DisplayPage(m_ddc, right));
@@ -64,7 +62,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     setupTray();
 
-    m_device = new EdgeDevice(this);
     connect(m_device, &EdgeDevice::stateChanged, this, &MainWindow::onDeviceState);
     m_device->startPolling(2000);
     onDeviceState(m_device->state());

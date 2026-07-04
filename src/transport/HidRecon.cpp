@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <algorithm>
+
 namespace xen {
 
 namespace {
@@ -27,11 +29,30 @@ std::vector<uint8_t> readFileBytes(const std::string& path)
     std::ifstream f(path, std::ios::binary);
     if (!f)
         return {};
-    return std::vector<uint8_t>((std::istreambuf_iterator<char>(f)),
-                                std::istreambuf_iterator<char>());
+    return { std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>() };
 }
 
 // Minimal HID report-descriptor decode covering the items this device uses.
+// HID report-descriptor item name for a (type, tag) pair.
+// type: 0 = Main, 1 = Global, 2 = Local.
+const char* itemName(int type, int tag)
+{
+    struct Entry {
+        int type;
+        int tag;
+        const char* name;
+    };
+    static const Entry table[] = {
+        { 1, 0x0, "Usage Page" },  { 1, 0x8, "Report ID" },   { 1, 0x7, "Report Size" },
+        { 1, 0x9, "Report Count" }, { 1, 0x1, "Logical Min" }, { 1, 0x2, "Logical Max" },
+        { 2, 0x0, "Usage" },       { 0, 0xA, "Collection" },   { 0, 0xC, "End Collection" },
+        { 0, 0x8, "Input" },       { 0, 0x9, "Output" },       { 0, 0xB, "Feature" },
+    };
+    const auto* it = std::find_if(std::begin(table), std::end(table),
+                                  [&](Entry e) { return e.type == type && e.tag == tag; });
+    return it != std::end(table) ? it->name : "?";
+}
+
 std::string decodeDescriptor(const std::vector<uint8_t>& d)
 {
     std::ostringstream os;
@@ -49,21 +70,7 @@ std::string decodeDescriptor(const std::vector<uint8_t>& d)
         const int tag = (b >> 4) & 0x0F;
         const long v = val(size);
         char line[128];
-        const char* name = "?";
-        // type 1 = Global, 2 = Local, 0 = Main
-        if (type == 1 && tag == 0x0) name = "Usage Page";
-        else if (type == 1 && tag == 0x8) name = "Report ID";
-        else if (type == 1 && tag == 0x7) name = "Report Size";
-        else if (type == 1 && tag == 0x9) name = "Report Count";
-        else if (type == 1 && tag == 0x1) name = "Logical Min";
-        else if (type == 1 && tag == 0x2) name = "Logical Max";
-        else if (type == 2 && tag == 0x0) name = "Usage";
-        else if (type == 0 && tag == 0xA) name = "Collection";
-        else if (type == 0 && tag == 0xC) name = "End Collection";
-        else if (type == 0 && tag == 0x8) name = "Input";
-        else if (type == 0 && tag == 0x9) name = "Output";
-        else if (type == 0 && tag == 0xB) name = "Feature";
-        std::snprintf(line, sizeof line, "  %-14s 0x%02lX (%ld)\n", name, v, v);
+        std::snprintf(line, sizeof line, "  %-14s 0x%02lX (%ld)\n", itemName(type, tag), v, v);
         os << line;
         i += 1 + size;
     }

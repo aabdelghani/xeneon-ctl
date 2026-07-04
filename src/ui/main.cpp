@@ -33,7 +33,7 @@ int runRestore(QCoreApplication& app)
 
     // Enough for bus detect + a handful of serialized setvcp calls.
     QTimer::singleShot(vcps.isEmpty() ? 1500 : 6000, &app, &QCoreApplication::quit);
-    return app.exec();
+    return QCoreApplication::exec();
 }
 
 } // namespace
@@ -50,8 +50,8 @@ int main(int argc, char** argv)
     qputenv("QT_XCB_NO_XI2", "1");
 
     QApplication app(argc, argv);
-    app.setApplicationName(QStringLiteral("xeneon-ctl"));
-    app.setOrganizationName(QStringLiteral("xeneon-ctl"));
+    QApplication::setApplicationName(QStringLiteral("xeneon-ctl"));
+    QApplication::setOrganizationName(QStringLiteral("xeneon-ctl"));
 
     for (int i = 1; i < argc; ++i) {
         if (qstrcmp(argv[i], "--restore") == 0)
@@ -64,5 +64,5 @@ int main(int argc, char** argv)
 
     xen::MainWindow w;
     w.show();
-    return app.exec();
+    return QApplication::exec();
 }

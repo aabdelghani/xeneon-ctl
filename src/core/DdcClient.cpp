@@ -3,6 +3,8 @@
 
 #include <QRegularExpression>
 
+#include <algorithm>
+
 namespace xen {
 
 DdcClient::DdcClient(QObject* parent)
@@ -26,16 +28,17 @@ void DdcClient::getVcp(quint8 code)
 void DdcClient::setVcp(quint8 code, quint16 value)
 {
     // Coalesce: replace a queued (not yet running) set for the same code.
-    for (auto& j : m_queue) {
-        if (j.kind == Job::Set && j.code == code) {
-            j.value = value;
-            return;
-        }
+    const auto it = std::find_if(m_queue.begin(), m_queue.end(), [code](Job j) {
+        return j.kind == Job::Set && j.code == code;
+    });
+    if (it != m_queue.end()) {
+        it->value = value;
+        return;
     }
     enqueue({ Job::Set, code, value });
 }
 
-void DdcClient::enqueue(const Job& job)
+void DdcClient::enqueue(Job job)
 {
     m_queue.append(job);
     if (!m_running)
@@ -85,7 +88,7 @@ void DdcClient::finishJob(int exitCode)
         const QStringList blocks = out.split(QStringLiteral("Display "));
         for (const QString& b : blocks) {
             if (b.contains(QStringLiteral("XENEON EDGE"))) {
-                QRegularExpression re(QStringLiteral("/dev/i2c-(\\d+)"));
+                static const QRegularExpression re(QStringLiteral("/dev/i2c-(\\d+)"));
                 const auto m = re.match(b);
                 if (m.hasMatch())
                     newBus = m.captured(1).toInt();
@@ -103,9 +106,9 @@ void DdcClient::finishJob(int exitCode)
             // Continuous: "current value =    95, max value =   100"
             // Non-continuous (ddcutil 1.4): "...): User 1 (0x0b), Tolerance..."
             //                or older style: "... (sl=0x05)"
-            QRegularExpression cont(
+            static const QRegularExpression cont(
                 QStringLiteral("current value\\s*=\\s*(\\d+),\\s*max value\\s*=\\s*(\\d+)"));
-            QRegularExpression nc(
+            static const QRegularExpression nc(
                 QStringLiteral("(?:sl=0x|\\(0x)([0-9a-fA-F]+)\\)?"));
             if (auto m = cont.match(out); m.hasMatch()) {
                 emit vcpRead(job.code, m.captured(1).toUShort(), m.captured(2).toUShort());

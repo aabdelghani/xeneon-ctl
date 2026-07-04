@@ -37,13 +37,15 @@ bool TouchEventSource::start()
         return false;
     }
 
-    int ev = 0, err = 0;
+    int ev = 0;
+    int err = 0;
     if (!XQueryExtension(dpy, "XInputExtension", &m_xiOpcode, &ev, &err)) {
         m_error = QStringLiteral("XInput extension missing");
         XCloseDisplay(dpy);
         return false;
     }
-    int major = 2, minor = 2;
+    int major = 2;
+    int minor = 2;
     if (XIQueryVersion(dpy, &major, &minor) != Success || major * 10 + minor < 22) {
         m_error = QStringLiteral("XInput2 >= 2.2 required (touch)");
         XCloseDisplay(dpy);
@@ -89,6 +91,50 @@ void TouchEventSource::stop()
     m_lastByTouch.clear();
 }
 
+bool TouchEventSource::collectDev(const void* xiDeviceInfo, Dev& out)
+{
+    const auto& d = *static_cast<const XIDeviceInfo*>(xiDeviceInfo);
+    Display* dpy = dpyOf(m_dpy);
+
+    // Collect the absolute valuators, ordered by number.
+    struct V {
+        int number;
+        double min, max;
+        char axis; // 'x','y','?'
+    };
+    std::vector<V> vs;
+    for (int c = 0; c < d.num_classes; ++c) {
+        if (d.classes[c]->type != XIValuatorClass)
+            continue;
+        auto* vi = reinterpret_cast<XIValuatorClassInfo*>(d.classes[c]);
+        char axis = '?';
+        if (vi->label) {
+            char* ln = XGetAtomName(dpy, vi->label);
+            if (ln) {
+                axis = std::strstr(ln, "Y") ? 'y' : (std::strstr(ln, "X") ? 'x' : '?');
+                XFree(ln);
+            }
+        }
+        vs.push_back({ vi->number, vi->min, vi->max, axis });
+    }
+    if (vs.size() < 2)
+        return false;
+
+    std::sort(vs.begin(), vs.end(), [](const V& a, const V& b) { return a.number < b.number; });
+    // Prefer labelled axes; else the first two valuators are X, Y.
+    V vx = vs[0];
+    V vy = vs[1];
+    for (const V& v : vs) {
+        if (v.axis == 'x')
+            vx = v;
+        else if (v.axis == 'y')
+            vy = v;
+    }
+    out.x = { vx.min, vx.max, vx.number };
+    out.y = { vy.min, vy.max, vy.number };
+    return true;
+}
+
 void TouchEventSource::queryDevices()
 {
     m_devs.clear();
@@ -99,47 +145,67 @@ void TouchEventSource::queryDevices()
         const XIDeviceInfo& d = infos[i];
         if (!d.name || std::strstr(d.name, kTouchName) == nullptr)
             continue;
-        // Collect the absolute valuators, ordered by number.
-        struct V {
-            int number;
-            double min, max;
-            char axis; // 'x','y','?'
-        };
-        std::vector<V> vs;
-        for (int c = 0; c < d.num_classes; ++c) {
-            if (d.classes[c]->type != XIValuatorClass)
-                continue;
-            auto* vi = reinterpret_cast<XIValuatorClassInfo*>(d.classes[c]);
-            char axis = '?';
-            if (vi->label) {
-                char* ln = XGetAtomName(dpy, vi->label);
-                if (ln) {
-                    if (std::strstr(ln, "Y"))
-                        axis = 'y';
-                    else if (std::strstr(ln, "X"))
-                        axis = 'x';
-                    XFree(ln);
-                }
-            }
-            vs.push_back({ vi->number, vi->min, vi->max, axis });
-        }
-        if (vs.size() < 2)
-            continue;
-        std::sort(vs.begin(), vs.end(), [](const V& a, const V& b) { return a.number < b.number; });
-        // Prefer labelled axes; else first two valuators are X, Y.
-        V vx = vs[0], vy = vs[1];
-        for (const V& v : vs) {
-            if (v.axis == 'x')
-                vx = v;
-            else if (v.axis == 'y')
-                vy = v;
-        }
         Dev dev;
-        dev.x = { vx.min, vx.max, vx.number };
-        dev.y = { vy.min, vy.max, vy.number };
-        m_devs.insert(d.deviceid, dev);
+        if (collectDev(&d, dev))
+            m_devs.insert(d.deviceid, dev);
     }
     XIFreeDeviceInfo(infos);
+}
+
+void TouchEventSource::normalizeXY(void* rawEvent, const Dev& dev, QPointF& io)
+{
+    auto* re = static_cast<XIRawEvent*>(rawEvent);
+    double rawX = 0;
+    double rawY = 0;
+    bool haveX = false;
+    bool haveY = false;
+    const double* val = re->raw_values;
+    const int nbits = re->valuators.mask_len * 8;
+    for (int b = 0; b < nbits; ++b) {
+        if (!XIMaskIsSet(re->valuators.mask, b))
+            continue;
+        const double v = *val++;
+        if (b == dev.x.number) {
+            rawX = v;
+            haveX = true;
+        } else if (b == dev.y.number) {
+            rawY = v;
+            haveY = true;
+        }
+    }
+    if (haveX && dev.x.max > dev.x.min)
+        io.setX(std::clamp((rawX - dev.x.min) / (dev.x.max - dev.x.min), 0.0, 1.0));
+    if (haveY && dev.y.max > dev.y.min)
+        io.setY(std::clamp((rawY - dev.y.min) / (dev.y.max - dev.y.min), 0.0, 1.0));
+}
+
+void TouchEventSource::processRawTouch(void* rawEvent, int evtype)
+{
+    auto* re = static_cast<XIRawEvent*>(rawEvent);
+    int devId = -1;
+    if (m_devs.contains(re->deviceid))
+        devId = re->deviceid;
+    else if (m_devs.contains(re->sourceid))
+        devId = re->sourceid;
+    if (devId < 0)
+        return;
+    const Dev dev = m_devs.value(devId);
+    const int touchId = re->detail;
+
+    if (evtype == XI_RawTouchEnd) {
+        // End often carries no position; reuse the last one.
+        const QPointF last = m_lastByTouch.value(touchId, QPointF(-1, -1));
+        m_lastByTouch.remove(touchId);
+        if (last.x() >= 0)
+            emit touch(touchId, Phase::End, last.x(), last.y());
+        return;
+    }
+
+    QPointF norm = m_lastByTouch.value(touchId, QPointF(0.5, 0.5));
+    normalizeXY(re, dev, norm);
+    m_lastByTouch.insert(touchId, norm);
+    const Phase phase = evtype == XI_RawTouchBegin ? Phase::Begin : Phase::Update;
+    emit touch(touchId, phase, norm.x(), norm.y());
 }
 
 void TouchEventSource::onReadable()
@@ -154,69 +220,11 @@ void TouchEventSource::onReadable()
             continue;
 
         const int type = xe.xcookie.evtype;
-        if (type == XI_HierarchyChanged) {
+        if (type == XI_HierarchyChanged)
             queryDevices();
-            XFreeEventData(dpy, &xe.xcookie);
-            continue;
-        }
-        if (type != XI_RawTouchBegin && type != XI_RawTouchUpdate && type != XI_RawTouchEnd) {
-            XFreeEventData(dpy, &xe.xcookie);
-            continue;
-        }
+        else if (type == XI_RawTouchBegin || type == XI_RawTouchUpdate || type == XI_RawTouchEnd)
+            processRawTouch(xe.xcookie.data, type);
 
-        auto* re = reinterpret_cast<XIRawEvent*>(xe.xcookie.data);
-        Dev dev;
-        if (m_devs.contains(re->deviceid))
-            dev = m_devs.value(re->deviceid);
-        else if (m_devs.contains(re->sourceid))
-            dev = m_devs.value(re->sourceid);
-        else {
-            XFreeEventData(dpy, &xe.xcookie);
-            continue;
-        }
-
-        const int touchId = re->detail;
-        Phase phase = type == XI_RawTouchBegin ? Phase::Begin
-                    : type == XI_RawTouchEnd   ? Phase::End
-                                               : Phase::Update;
-
-        if (phase == Phase::End) {
-            // End often carries no position; reuse last.
-            const QPointF last = m_lastByTouch.value(touchId, QPointF(-1, -1));
-            m_lastByTouch.remove(touchId);
-            if (last.x() >= 0)
-                emit touch(touchId, Phase::End, last.x(), last.y());
-            XFreeEventData(dpy, &xe.xcookie);
-            continue;
-        }
-
-        // Extract raw values for the x/y valuator numbers.
-        double rawX = 0, rawY = 0;
-        bool haveX = false, haveY = false;
-        const double* val = re->raw_values;
-        const int nbits = re->valuators.mask_len * 8;
-        for (int b = 0; b < nbits; ++b) {
-            if (!XIMaskIsSet(re->valuators.mask, b))
-                continue;
-            const double v = *val++;
-            if (b == dev.x.number) {
-                rawX = v;
-                haveX = true;
-            } else if (b == dev.y.number) {
-                rawY = v;
-                haveY = true;
-            }
-        }
-
-        QPointF prev = m_lastByTouch.value(touchId, QPointF(0.5, 0.5));
-        double nx = prev.x(), ny = prev.y();
-        if (haveX && dev.x.max > dev.x.min)
-            nx = std::clamp((rawX - dev.x.min) / (dev.x.max - dev.x.min), 0.0, 1.0);
-        if (haveY && dev.y.max > dev.y.min)
-            ny = std::clamp((rawY - dev.y.min) / (dev.y.max - dev.y.min), 0.0, 1.0);
-        m_lastByTouch.insert(touchId, QPointF(nx, ny));
-
-        emit touch(touchId, phase, nx, ny);
         XFreeEventData(dpy, &xe.xcookie);
     }
 }

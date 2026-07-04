@@ -50,7 +50,7 @@ void TouchOverlay::showOnScreen(QScreen* screen)
     activateWindow();
 }
 
-void TouchOverlay::bump(int id, const QPointF& p, bool active)
+void TouchOverlay::bump(int id, QPointF p, bool active)
 {
     Touch& t = m_touches[id];
     t.pos = p;
@@ -139,7 +139,7 @@ void TouchOverlay::paintEvent(QPaintEvent*)
                 dead.append(it.key());
         }
     }
-    for (int k : dead)
+    for (int const k : dead)
         m_touches.remove(k);
 
     for (auto it = m_touches.constBegin(); it != m_touches.constEnd(); ++it) {

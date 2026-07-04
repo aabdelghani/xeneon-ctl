@@ -28,7 +28,7 @@ public:
 
     explicit EdgeDevice(QObject* parent = nullptr);
 
-    State state() const { return m_state; }
+    [[nodiscard]] State state() const { return m_state; }
     void startPolling(int intervalMs = 2000);
     void pollNow();
 

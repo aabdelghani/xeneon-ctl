@@ -1,0 +1,39 @@
+# clang-tidy configuration for xeneon-ctl.
+# Pragmatic, high-signal check set. Qt moc/uic/generated code is excluded via
+# the run invocation (only src/ TUs are analyzed).
+Checks: >
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  misc-*,
+  cppcoreguidelines-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -misc-include-cleaner,
+  -readability-implicit-bool-conversion,
+  -readability-braces-around-statements,
+  -readability-redundant-access-specifiers,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -readability-named-parameter,
+  -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -performance-enum-size
+
+WarningsAsErrors: ''
+HeaderFilterRegex: 'src/.*\.h$'
+FormatStyle: none

@@ -31,7 +31,7 @@ QString hexBlock(const std::vector<uint8_t>& bytes, int perLine = 16)
 } // namespace
 
 ProbePage::ProbePage(QWidget* parent)
-    : QWidget(parent)
+    : QWidget(parent), m_out(new QPlainTextEdit(this))
 {
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(24, 24, 24, 24);
@@ -65,7 +65,7 @@ ProbePage::ProbePage(QWidget* parent)
     hl->addLayout(btnRow);
     lay->addWidget(header);
 
-    m_out = new QPlainTextEdit(this);
+    
     m_out->setObjectName(QStringLiteral("console"));
     m_out->setReadOnly(true);
     m_out->setLineWrapMode(QPlainTextEdit::NoWrap);
@@ -76,19 +76,19 @@ ProbePage::ProbePage(QWidget* parent)
 
 void ProbePage::runProbe()
 {
-    ReconReport r = HidRecon::run();
+    ReconReport const r = HidRecon::run();
     QString t;
     if (!r.haveInfo) {
         m_out->setPlainText(tr("No Xeneon Edge found."));
         return;
     }
     t += tr("XENEON EDGE  (read-only probe — no writes sent)\n");
-    t += QString("  product:    %1\n").arg(QString::fromStdString(r.info.product));
-    t += QString("  serial:     %1\n").arg(QString::fromStdString(r.info.serial));
-    t += QString("  hidraw:     %1\n").arg(QString::fromStdString(r.info.path));
-    t += QString("  usage page: 0x%1\n").arg(r.info.usagePage, 4, 16, QLatin1Char('0'));
+    t += QStringLiteral("  product:    %1\n").arg(QString::fromStdString(r.info.product));
+    t += QStringLiteral("  serial:     %1\n").arg(QString::fromStdString(r.info.serial));
+    t += QStringLiteral("  hidraw:     %1\n").arg(QString::fromStdString(r.info.path));
+    t += QStringLiteral("  usage page: 0x%1\n").arg(r.info.usagePage, 4, 16, QLatin1Char('0'));
 
-    t += QString("\nReport descriptor (%1 bytes, %2):\n")
+    t += QStringLiteral("\nReport descriptor (%1 bytes, %2):\n")
              .arg(r.reportDescriptor.size())
              .arg(QString::fromStdString(r.descriptorSource));
     t += hexBlock(r.reportDescriptor) + "\n";
@@ -112,7 +112,7 @@ void ProbePage::queryFirmware()
 
     BragiFrame frame = buildFirmwareQuery();
     QString txHex;
-    for (size_t i = 0; i < frame.size(); ++i)
+    for (size_t i = 0; i < xen::BragiFrame::size(); ++i)
         txHex += QString::asprintf("%02X ", frame.data()[i]);
 
     QMessageBox box(this);
@@ -130,15 +130,15 @@ void ProbePage::queryFirmware()
     if (box.exec() != QMessageBox::Ok)
         return;
 
-    Confirmation conf = Confirmation::approve(QStringLiteral("firmware-version query"));
-    Exchange ex = WriteGate::exchange(QString::fromStdString(info->path), frame, conf);
+    Confirmation const conf = Confirmation::approve(QStringLiteral("firmware-version query"));
+    Exchange const ex = WriteGate::exchange(QString::fromStdString(info->path), frame, conf);
 
     QString r;
     r += tr("=== Firmware version query (M4) ===\n");
     r += tr("TX (64B): ");
-    for (uint8_t b : ex.tx)
+    for (uint8_t const b : ex.tx)
         r += QString::asprintf("%02X ", b);
-    r += "\n";
+    r += QLatin1Char('\n');
     if (!ex.error.isEmpty()) {
         r += tr("ERROR: %1\n").arg(ex.error);
     } else if (ex.rx.empty()) {
@@ -146,13 +146,13 @@ void ProbePage::queryFirmware()
                 "The command byte or framing may differ; see PROTOCOL.md candidates.\n");
     } else {
         r += tr("RX (%1B): ").arg(ex.rx.size());
-        for (uint8_t b : ex.rx)
+        for (uint8_t const b : ex.rx)
             r += QString::asprintf("%02X ", b);
-        r += "\n";
+        r += QLatin1Char('\n');
         // Heuristic: many Bragi replies echo the command then carry an ASCII or
         // BCD version. Show any printable ASCII run as a hint.
         QString ascii;
-        for (uint8_t b : ex.rx)
+        for (uint8_t const b : ex.rx)
             ascii += (b >= 0x20 && b < 0x7F) ? QChar(b) : QChar('.');
         r += tr("RX ascii: %1\n").arg(ascii);
     }

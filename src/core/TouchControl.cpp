@@ -5,6 +5,8 @@
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 
+#include <algorithm>
+
 namespace xen {
 
 namespace {
@@ -33,7 +35,7 @@ TouchControl::TouchControl(QObject* parent)
 {
 }
 
-bool TouchControl::isX11() const
+bool TouchControl::isX11() 
 {
     const auto env = QProcessEnvironment::systemEnvironment();
     const QString session = env.value(QStringLiteral("XDG_SESSION_TYPE"));
@@ -53,7 +55,7 @@ QList<int> TouchControl::deviceIds()
     // Lines like: "⎜   ↳ wch.cn TouchScreen  id=20  [slave  pointer  (2)]" or,
     // when detached from the master, "... id=20 [floating slave]".
     const QStringList lines = out.split('\n');
-    QRegularExpression re(QStringLiteral("id=(\\d+)"));
+    static const QRegularExpression re(QStringLiteral("id=(\\d+)"));
     for (const QString& line : lines) {
         if (line.contains(QLatin1String(kTouchName))) {
             const auto m = re.match(line);
@@ -71,7 +73,7 @@ bool TouchControl::deviceMovesPointer(int id)
     const QString props =
         runCapture(QStringLiteral("xinput"),
                    { QStringLiteral("list-props"), QString::number(id) }, &rc);
-    QRegularExpression re(QStringLiteral("Device Enabled[^:]*:\\s*(\\d)"));
+    static const QRegularExpression re(QStringLiteral("Device Enabled[^:]*:\\s*(\\d)"));
     const auto m = re.match(props);
     const bool enabled = m.hasMatch() && m.captured(1) == QLatin1String("1");
 
@@ -106,7 +108,7 @@ int TouchControl::deviceMasterId(int id)
             if (line.contains(QStringLiteral("floating")))
                 return -1;
             // "[slave  pointer  (2)]" -> master id 2 (note trailing ']').
-            QRegularExpression re(QStringLiteral("pointer\\s*\\((\\d+)\\)"));
+            static const QRegularExpression re(QStringLiteral("pointer\\s*\\((\\d+)\\)"));
             const auto m = re.match(line);
             if (m.hasMatch())
                 return m.captured(1).toInt();
@@ -117,11 +119,11 @@ int TouchControl::deviceMasterId(int id)
 
 int TouchControl::ensureEdgeMaster()
 {
-    auto findMaster = [this]() -> int {
+    auto findMaster = []() -> int {
         int rc = 0;
         const QString out = runCapture(
             QStringLiteral("xinput"), { QStringLiteral("list"), QStringLiteral("--short") }, &rc);
-        QRegularExpression idre(QStringLiteral("id=(\\d+)"));
+        static const QRegularExpression idre(QStringLiteral("id=(\\d+)"));
         for (const QString& line : out.split('\n')) {
             if (line.contains(QLatin1String(kEdgeMasterName))
                 && line.contains(QStringLiteral("master pointer"))) {
@@ -132,7 +134,7 @@ int TouchControl::ensureEdgeMaster()
         }
         return -1;
     };
-    int id = findMaster();
+    int const id = findMaster();
     if (id > 0)
         return id;
     int rc = 0;
@@ -148,19 +150,20 @@ TouchControl::Mode TouchControl::mode()
         return Mode::Off;
 
     // Enabled? (any disabled -> Off)
-    for (int id : ids) {
+    for (int const id : ids) {
         int rc = 0;
         const QString props = runCapture(
             QStringLiteral("xinput"), { QStringLiteral("list-props"), QString::number(id) }, &rc);
-        QRegularExpression re(QStringLiteral("Device Enabled[^:]*:\\s*(\\d)"));
+        static const QRegularExpression re(QStringLiteral("Device Enabled[^:]*:\\s*(\\d)"));
         const auto m = re.match(props);
         if (!(m.hasMatch() && m.captured(1) == QLatin1String("1")))
             return Mode::Off;
     }
 
     const int core = masterPointerId();
-    bool anyFloating = false, anyNonCore = false;
-    for (int id : ids) {
+    bool anyFloating = false;
+    bool anyNonCore = false;
+    for (int const id : ids) {
         const int master = deviceMasterId(id);
         if (master < 0)
             anyFloating = true;
@@ -188,7 +191,7 @@ bool TouchControl::setMode(Mode m)
     }
 
     if (m == Mode::Off) {
-        for (int id : ids)
+        for (int const id : ids)
             runCapture(QStringLiteral("xinput"),
                        { QStringLiteral("disable"), QString::number(id) });
         refresh();
@@ -198,7 +201,7 @@ bool TouchControl::setMode(Mode m)
     if (m == Mode::Indicator) {
         // Float the devices so they drive NO pointer at all; raw touch events
         // still fire and are read by TouchEventSource for the ripple overlay.
-        for (int id : ids) {
+        for (int const id : ids) {
             runCapture(QStringLiteral("xinput"), { QStringLiteral("enable"), QString::number(id) });
             runCapture(QStringLiteral("xinput"), { QStringLiteral("float"), QString::number(id) });
         }
@@ -214,8 +217,8 @@ bool TouchControl::setMode(Mode m)
     else
         master = ensureEdgeMaster();
 
-    bool ok = master > 0;
-    for (int id : ids) {
+    bool const ok = master > 0;
+    for (int const id : ids) {
         runCapture(QStringLiteral("xinput"), { QStringLiteral("enable"), QString::number(id) });
         if (master > 0)
             runCapture(QStringLiteral("xinput"),
@@ -239,7 +242,7 @@ void TouchControl::removeEdgeMasterIfEmpty()
     for (const QString& line : lines) {
         if (line.contains(QLatin1String(kEdgeMasterName))
             && line.contains(QStringLiteral("master pointer"))) {
-            QRegularExpression idre(QStringLiteral("id=(\\d+)"));
+            static const QRegularExpression idre(QStringLiteral("id=(\\d+)"));
             const auto mm = idre.match(line);
             if (mm.hasMatch())
                 masterId = mm.captured(1).toInt();
@@ -248,9 +251,11 @@ void TouchControl::removeEdgeMasterIfEmpty()
     if (masterId < 0)
         return;
     const QString tag = QString::asprintf("(%d)", masterId);
-    for (const QString& line : lines)
-        if (line.contains(QStringLiteral("slave")) && line.contains(tag))
-            return; // still in use
+    const bool stillInUse = std::any_of(lines.begin(), lines.end(), [&tag](const QString& line) {
+        return line.contains(QStringLiteral("slave")) && line.contains(tag);
+    });
+    if (stillInUse)
+        return;
     runCapture(QStringLiteral("xinput"),
                { QStringLiteral("remove-master"), QString::number(masterId) });
 }
@@ -261,8 +266,7 @@ int TouchControl::masterPointerId()
     const QString out =
         runCapture(QStringLiteral("xinput"), { QStringLiteral("list"), QStringLiteral("--short") },
                    &rc);
-    QRegularExpression re(QStringLiteral("master pointer"));
-    QRegularExpression idre(QStringLiteral("id=(\\d+)"));
+    static const QRegularExpression idre(QStringLiteral("id=(\\d+)"));
     for (const QString& line : out.split('\n')) {
         if (line.contains(QStringLiteral("master pointer"))) {
             const auto m = idre.match(line);
@@ -280,7 +284,7 @@ QString TouchControl::edgeOutputName()
     if (rc != 0)
         return {};
     // Find the "<OUTPUT> connected ... 2560x720+X+Y ..." line.
-    QRegularExpression re(
+    static const QRegularExpression re(
         QStringLiteral("(?m)^(\\S+) connected[^\\n]*\\b2560x720\\+"));
     const auto m = re.match(out);
     return m.hasMatch() ? m.captured(1) : QString();
@@ -304,7 +308,7 @@ TouchControl::State TouchControl::refresh()
     }
 
     bool anyMoves = false;
-    for (int id : ids)
+    for (int const id : ids)
         if (deviceMovesPointer(id))
             anyMoves = true;
 
@@ -326,7 +330,7 @@ QList<double> TouchControl::matrix()
     const QString props = runCapture(
         QStringLiteral("xinput"),
         { QStringLiteral("list-props"), QString::number(ids.first()) }, &rc);
-    QRegularExpression re(
+    static const QRegularExpression re(
         QStringLiteral("Coordinate Transformation Matrix[^:]*:\\s*([^\\n]+)"));
     const auto m = re.match(props);
     if (!m.hasMatch())
@@ -343,7 +347,7 @@ bool TouchControl::applyOutputMapping()
     if (out.isEmpty())
         return false;
     bool ok = true;
-    for (int id : deviceIds()) {
+    for (int const id : deviceIds()) {
         int rc = 0;
         runCapture(QStringLiteral("xinput"),
                    { QStringLiteral("map-to-output"), QString::number(id), out }, &rc);
@@ -358,10 +362,10 @@ bool TouchControl::setMatrix(const QList<double>& m)
     if (m.size() != 9)
         return false;
     QStringList vals;
-    for (double v : m)
+    for (double const v : m)
         vals << QString::number(v, 'g', 10);
     bool ok = true;
-    for (int id : deviceIds()) {
+    for (int const id : deviceIds()) {
         int rc = 0;
         QStringList args{ QStringLiteral("set-prop"), QString::number(id),
                           QStringLiteral("Coordinate Transformation Matrix") };
@@ -386,7 +390,7 @@ bool TouchControl::setPointerEnabled(bool enabled)
         return false;
     }
     bool ok = true;
-    for (int id : ids) {
+    for (int const id : ids) {
         int rc = 0;
         if (enabled) {
             // Enable, reattach to the master pointer, and map to the Edge output

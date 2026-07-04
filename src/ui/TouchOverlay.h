@@ -39,7 +39,7 @@ private:
         int ageMs = 0; // for release fade
     };
 
-    void bump(int id, const QPointF& p, bool active);
+    void bump(int id, QPointF p, bool active);
 
     QHash<int, Touch> m_touches; // by touch id (mouse uses id -1)
     QElapsedTimer m_clock;

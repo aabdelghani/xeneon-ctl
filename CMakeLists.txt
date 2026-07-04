@@ -8,6 +8,9 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(PkgConfig REQUIRED)
+
+# Strict warnings for our own code (kept warning-clean; not applied to Qt moc).
+add_compile_options(-Wall -Wextra -Wpedantic)
 pkg_check_modules(HIDAPI REQUIRED IMPORTED_TARGET hidapi-hidraw)
 pkg_check_modules(X11XI REQUIRED IMPORTED_TARGET x11 xi)
 

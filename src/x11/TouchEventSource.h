@@ -26,16 +26,13 @@ public:
     // Opens the X display, finds the touch device(s), selects raw touch events.
     bool start();
     void stop();
-    bool running() const { return m_dpy != nullptr; }
-    QString lastError() const { return m_error; }
+    [[nodiscard]] bool running() const { return m_dpy != nullptr; }
+    [[nodiscard]] QString lastError() const { return m_error; }
 
 signals:
     void touch(int id, xen::TouchEventSource::Phase phase, double nx, double ny);
 
 private:
-    void onReadable();
-    void queryDevices(); // (re)discover wch.cn valuator ranges
-
     struct AxisRange {
         double min = 0;
         double max = 1;
@@ -45,6 +42,12 @@ private:
         AxisRange x;
         AxisRange y;
     };
+
+    void onReadable();
+    void queryDevices();                              // (re)discover wch.cn valuator ranges
+    bool collectDev(const void* xiDeviceInfo, Dev& out); // fill Dev from an XIDeviceInfo*
+    void processRawTouch(void* rawEvent, int evtype);    // handle one XIRawEvent
+    static void normalizeXY(void* rawEvent, const Dev& dev, QPointF& io); // raw -> 0..1
 
     void* m_dpy = nullptr;         // Display* (opaque to keep Xlib out of header)
     int m_xiOpcode = 0;

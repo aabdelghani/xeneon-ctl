@@ -7,9 +7,19 @@
 #include <QTextStream>
 #include <QTimer>
 
+#include <iterator>
+#include <numeric>
+
 namespace xen {
 
 namespace {
+
+// Shared, compile-once whitespace splitter (avoids rebuilding the regex each call).
+const QRegularExpression& whitespace()
+{
+    static const QRegularExpression re(QStringLiteral("\\s+"));
+    return re;
+}
 
 // Find the k10temp (or any) "Tctl"/first CPU temp input under hwmon.
 QString findCpuTempInput()
@@ -44,8 +54,8 @@ QString findCpuTempInput()
 
 SensorSource::SensorSource(QObject* parent)
     : QObject(parent)
+    , m_cpuTempPath(findCpuTempInput())
 {
-    m_cpuTempPath = findCpuTempInput();
     m_gpu.setProcessChannelMode(QProcess::MergedChannels);
     connect(&m_gpu, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
             &SensorSource::onGpuFinished);
@@ -73,16 +83,14 @@ double SensorSource::readCpuLoad()
     if (!f.open(QIODevice::ReadOnly))
         return -1;
     const QString line = QString::fromUtf8(f.readLine());
-    const QStringList p = line.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    const QStringList p = line.split(whitespace(), Qt::SkipEmptyParts);
     if (p.size() < 8 || p[0] != QStringLiteral("cpu"))
         return -1;
     unsigned long long vals[7];
     for (int i = 0; i < 7; ++i)
         vals[i] = p[i + 1].toULongLong();
     const unsigned long long idle = vals[3] + vals[4]; // idle + iowait
-    unsigned long long total = 0;
-    for (int i = 0; i < 7; ++i)
-        total += vals[i];
+    const unsigned long long total = std::accumulate(std::begin(vals), std::end(vals), 0ULL);
 
     double load = -1;
     if (m_haveStat) {
@@ -114,19 +122,20 @@ void SensorSource::readMemory(SensorSnapshot& s)
     QFile f(QStringLiteral("/proc/meminfo"));
     if (!f.open(QIODevice::ReadOnly))
         return;
-    unsigned long long total = 0, avail = 0;
+    unsigned long long total = 0;
+    unsigned long long avail = 0;
     QTextStream ts(&f);
     QString line;
     while (ts.readLineInto(&line)) {
         if (line.startsWith(QStringLiteral("MemTotal:")))
-            total = line.section(QRegularExpression(QStringLiteral("\\s+")), 1, 1).toULongLong();
+            total = line.section(whitespace(), 1, 1).toULongLong();
         else if (line.startsWith(QStringLiteral("MemAvailable:")))
-            avail = line.section(QRegularExpression(QStringLiteral("\\s+")), 1, 1).toULongLong();
+            avail = line.section(whitespace(), 1, 1).toULongLong();
     }
     if (total > 0) {
-        s.ramTotalGiB = total / 1048576.0; // kB -> GiB
-        s.ramUsedGiB = (total - avail) / 1048576.0;
-        s.ramPct = 100.0 * (double(total - avail) / double(total));
+        s.ramTotalGiB = static_cast<double>(total) / 1048576.0; // kB -> GiB
+        s.ramUsedGiB = static_cast<double>(total - avail) / 1048576.0;
+        s.ramPct = 100.0 * (static_cast<double>(total - avail) / static_cast<double>(total));
     }
 }
 

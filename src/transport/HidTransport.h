@@ -23,7 +23,7 @@ public:
 
     bool open(const std::string& path);
     void close();
-    bool isOpen() const { return m_dev != nullptr; }
+    [[nodiscard]] bool isOpen() const { return m_dev != nullptr; }
 
     // Writes a full report (report id included). Returns bytes written or -1.
     int write(const uint8_t* data, size_t len);
@@ -31,7 +31,7 @@ public:
     // Reads one report with timeout; empty vector on timeout/error.
     std::vector<uint8_t> read(size_t maxLen, int timeoutMs);
 
-    std::string lastError() const { return m_error; }
+    [[nodiscard]] std::string lastError() const { return m_error; }
 
 private:
     hid_device* m_dev = nullptr;

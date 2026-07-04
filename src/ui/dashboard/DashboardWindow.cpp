@@ -26,17 +26,17 @@ const QColor kAccentViolet(0xB4, 0x8E, 0xF0);
 
 DashboardWindow::DashboardWindow(QWidget* parent)
     : QWidget(parent, Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
+    , m_sensors(new SensorSource(this))
+    , m_clockTimer(new QTimer(this))
 {
     setWindowTitle(QStringLiteral("Xeneon Edge — Dashboard"));
     setCursor(Qt::BlankCursor);
 
-    m_sensors = new SensorSource(this);
     connect(m_sensors, &SensorSource::updated, this, [this](const SensorSnapshot& s) {
         m_snap = s;
         update();
     });
 
-    m_clockTimer = new QTimer(this);
     connect(m_clockTimer, &QTimer::timeout, this, [this] {
         const QDateTime now = QDateTime::currentDateTime();
         m_time = now.toString(QStringLiteral("HH:mm"));
@@ -146,7 +146,7 @@ void DashboardWindow::paintEvent(QPaintEvent*)
     const qreal tileW = (width() - 2 * m - clockW - 3 * gap) / 3.0;
 
     // --- Clock ---
-    QRectF clockR(m, top, clockW, h);
+    QRectF const clockR(m, top, clockW, h);
     QPainterPath cp;
     cp.addRoundedRect(clockR, 18, 18);
     g.fillPath(cp, kCard);
@@ -177,14 +177,14 @@ void DashboardWindow::paintEvent(QPaintEvent*)
     auto fmt = [](double v, const char* suffix, int dec = 0) {
         return v < 0 ? QStringLiteral("--") : QString::number(v, 'f', dec) + QLatin1String(suffix);
     };
-    QRectF cpuR(m + clockW + gap, top, tileW, h);
+    QRectF const cpuR(m + clockW + gap, top, tileW, h);
     drawTile(g, cpuR, QStringLiteral("CPU"), fmt(m_snap.cpuLoadPct, "%"),
              m_snap.cpuTempC < 0 ? QStringLiteral("temp --")
                                  : QStringLiteral("%1 °C").arg(m_snap.cpuTempC, 0, 'f', 0),
              m_snap.cpuLoadPct, kAccentYellow);
 
     // --- GPU ---
-    QRectF gpuR(cpuR.right() + gap, top, tileW, h);
+    QRectF const gpuR(cpuR.right() + gap, top, tileW, h);
     drawTile(g, gpuR, QStringLiteral("GPU"), m_snap.gpuOk ? fmt(m_snap.gpuUtilPct, "%")
                                                           : QStringLiteral("--"),
              m_snap.gpuOk
@@ -196,7 +196,7 @@ void DashboardWindow::paintEvent(QPaintEvent*)
              m_snap.gpuOk ? m_snap.gpuUtilPct : -1, kAccentCyan);
 
     // --- RAM ---
-    QRectF ramR(gpuR.right() + gap, top, tileW, h);
+    QRectF const ramR(gpuR.right() + gap, top, tileW, h);
     drawTile(g, ramR, QStringLiteral("MEMORY"), fmt(m_snap.ramPct, "%"),
              QStringLiteral("%1 / %2 GB").arg(m_snap.ramUsedGiB, 0, 'f', 1)
                  .arg(m_snap.ramTotalGiB, 0, 'f', 0),

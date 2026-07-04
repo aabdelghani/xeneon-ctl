@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/CalibrationOverlay.h"
 
+#include <cmath>
+
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -52,7 +54,8 @@ bool fitAffineRow(const QVector<QPointF>& src, const QVector<double>& q, double 
     double A[3][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
     double rhs[3] = { 0, 0, 0 };
     for (int i = 0; i < src.size(); ++i) {
-        const double px = src[i].x(), py = src[i].y();
+        const double px = src[i].x();
+        const double py = src[i].y();
         const double basis[3] = { px, py, 1.0 };
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++c)
@@ -83,8 +86,8 @@ void CalibrationOverlay::showOnScreen(QScreen* screen)
 
     // Baseline: start from the clean geometric mapping so taps land near the
     // targets and stay on this overlay while we measure.
-    m_touch->applyOutputMapping();
-    m_baseMatrix = m_touch->matrix();
+    xen::TouchControl::applyOutputMapping();
+    m_baseMatrix = xen::TouchControl::matrix();
 
     winId();
     if (windowHandle())
@@ -103,7 +106,7 @@ void CalibrationOverlay::showOnScreen(QScreen* screen)
     activateWindow();
 }
 
-void CalibrationOverlay::recordHit(const QPointF& localPos)
+void CalibrationOverlay::recordHit(QPointF localPos)
 {
     if (m_index >= m_targets.size())
         return;
@@ -143,12 +146,17 @@ void CalibrationOverlay::solveAndApply()
     // Virtual desktop geometry: the matrix maps device-normalized coords into
     // the whole X screen, so normalize against the virtual bounds.
     const QRect vg = m_screen->virtualGeometry();
-    const double W = vg.width(), H = vg.height();
+    const double W = vg.width();
+    const double H = vg.height();
     const QPointF org = m_screen->geometry().topLeft() - vg.topLeft();
 
     // Invert the base (measurement) matrix affine to recover raw device coords.
-    const double a = m_baseMatrix[0], b = m_baseMatrix[1], c = m_baseMatrix[2];
-    const double d = m_baseMatrix[3], e = m_baseMatrix[4], f = m_baseMatrix[5];
+    const double a = m_baseMatrix[0];
+    const double b = m_baseMatrix[1];
+    const double c = m_baseMatrix[2];
+    const double d = m_baseMatrix[3];
+    const double e = m_baseMatrix[4];
+    const double f = m_baseMatrix[5];
     const double det = a * e - b * d;
     if (std::abs(det) < 1e-12) {
         m_status = tr("Calibration failed (degenerate base matrix).");
@@ -162,18 +170,21 @@ void CalibrationOverlay::solveAndApply()
     };
 
     QVector<QPointF> raw;         // device-normalized coords produced by taps
-    QVector<double> tx, ty;       // desired screen-normalized target coords
+    QVector<double> tx;
+    QVector<double> ty;       // desired screen-normalized target coords
     for (int i = 0; i < m_measured.size(); ++i) {
         const double pnx = (m_measured[i].x() + org.x()) / W;
         const double pny = (m_measured[i].y() + org.y()) / H;
-        double dnx, dny;
+        double dnx = NAN;
+        double dny = NAN;
         invApply(pnx, pny, dnx, dny);
         raw.append(QPointF(dnx, dny));
         tx.append((m_targets[i].x() + org.x()) / W);
         ty.append((m_targets[i].y() + org.y()) / H);
     }
 
-    double rowX[3], rowY[3];
+    double rowX[3];
+    double rowY[3];
     if (!fitAffineRow(raw, tx, rowX) || !fitAffineRow(raw, ty, rowY)) {
         m_status = tr("Calibration failed (could not solve). Try again.");
         emit finished(false);
@@ -181,8 +192,8 @@ void CalibrationOverlay::solveAndApply()
         return;
     }
 
-    QList<double> M{ rowX[0], rowX[1], rowX[2], rowY[0], rowY[1], rowY[2], 0, 0, 1 };
-    const bool ok = m_touch->setMatrix(M);
+    QList<double> const M{ rowX[0], rowX[1], rowX[2], rowY[0], rowY[1], rowY[2], 0, 0, 1 };
+    const bool ok = xen::TouchControl::setMatrix(M);
     m_status = ok ? tr("Calibration applied. Tap anywhere to verify, Esc to finish.")
                   : tr("Could not write the matrix (xinput error).");
     emit finished(ok);

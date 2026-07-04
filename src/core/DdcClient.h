@@ -28,7 +28,7 @@ public:
     explicit DdcClient(QObject* parent = nullptr);
 
     void start(); // async: detect the Edge's i2c bus once
-    bool ready() const { return m_bus >= 0; }
+    [[nodiscard]] bool ready() const { return m_bus >= 0; }
 
     void getVcp(quint8 code);
     void setVcp(quint8 code, quint16 value);
@@ -46,7 +46,7 @@ private:
         quint16 value = 0;
     };
 
-    void enqueue(const Job& job);
+    void enqueue(Job job);
     void startNext();
     void finishJob(int exitCode);
 

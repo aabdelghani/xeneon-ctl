@@ -20,7 +20,7 @@
 namespace xen {
 
 DevicePage::DevicePage(QWidget* parent)
-    : QWidget(parent)
+    : QWidget(parent), m_touch(new TouchControl(this))
 {
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(24, 24, 24, 24);
@@ -76,7 +76,7 @@ DevicePage::DevicePage(QWidget* parent)
     auto* remapBtn = new QPushButton(tr("Reset mapping"), card);
     remapBtn->setObjectName(QStringLiteral("actionButton"));
     connect(remapBtn, &QPushButton::clicked, this, [this] {
-        m_touch->applyOutputMapping();
+        xen::TouchControl::applyOutputMapping();
         m_touch->refresh();
     });
     btnRow->addWidget(remapBtn);
@@ -87,7 +87,7 @@ DevicePage::DevicePage(QWidget* parent)
     m_autostart = new QCheckBox(
         tr("Reapply this touch mode and display settings automatically at login"), card);
     m_autostart->setChecked(settings::autostartEnabled());
-    connect(m_autostart, &QCheckBox::toggled, this, [this](bool on) {
+    connect(m_autostart, &QCheckBox::toggled, this, [](bool on) {
         settings::setAutostart(on);
     });
     v->addWidget(m_autostart);
@@ -95,7 +95,7 @@ DevicePage::DevicePage(QWidget* parent)
     lay->addWidget(card);
     lay->addStretch(1);
 
-    m_touch = new TouchControl(this);
+    
     connect(m_touch, &TouchControl::stateChanged, this, &DevicePage::onTouchState);
 
     // Restore the last-used touch mode at startup (persists across reboots).
@@ -111,12 +111,12 @@ void DevicePage::showEvent(QShowEvent* ev)
 
 void DevicePage::syncMode()
 {
-    const TouchControl::Mode m = m_touch->mode();
+    const TouchControl::Mode m = xen::TouchControl::mode();
     QRadioButton* b = m == TouchControl::Mode::Off        ? m_modeOff
                     : m == TouchControl::Mode::MainCursor  ? m_modeMain
                     : m == TouchControl::Mode::Independent ? m_modeIndep
                                                            : m_modeIndicator;
-    QSignalBlocker block(b);
+    QSignalBlocker const block(b);
     b->setChecked(true);
 }
 

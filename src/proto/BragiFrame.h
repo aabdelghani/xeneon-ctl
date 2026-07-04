@@ -22,12 +22,12 @@ public:
     BragiFrame(); // zeroed payload, report id set
 
     // Whole report, as written to / read from the hidraw node.
-    const uint8_t* data() const { return m_buf.data(); }
+    [[nodiscard]] const uint8_t* data() const { return m_buf.data(); }
     uint8_t*       data()       { return m_buf.data(); }
-    size_t         size() const { return kReportSize; }
+    [[nodiscard]] static size_t         size() { return kReportSize; }
 
     // Payload region (bytes after the report id).
-    const uint8_t* payload() const { return m_buf.data() + 1; }
+    [[nodiscard]] const uint8_t* payload() const { return m_buf.data() + 1; }
     uint8_t*       payload()       { return m_buf.data() + 1; }
 
     // Copies up to kPayloadSize bytes; returns bytes actually copied.
@@ -37,7 +37,7 @@ public:
     static BragiFrame fromRaw(const uint8_t* src, size_t len);
 
 private:
-    std::array<uint8_t, kReportSize> m_buf;
+    std::array<uint8_t, kReportSize> m_buf{};
 };
 
 } // namespace xen

@@ -38,7 +38,7 @@ public:
 
     void start(int intervalMs = 1000);
     void stop();
-    SensorSnapshot latest() const { return m_snap; }
+    [[nodiscard]] SensorSnapshot latest() const { return m_snap; }
 
 signals:
     void updated(const xen::SensorSnapshot& snap);
@@ -47,7 +47,7 @@ private:
     void poll();
     double readCpuLoad();      // delta since last call
     double readCpuTemp();
-    void readMemory(SensorSnapshot& s);
+    static void readMemory(SensorSnapshot& s);
     void kickGpuQuery();
     void onGpuFinished(int exitCode, QProcess::ExitStatus);
 

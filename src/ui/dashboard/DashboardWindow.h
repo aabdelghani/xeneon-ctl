@@ -26,7 +26,7 @@ protected:
     void keyPressEvent(QKeyEvent* e) override;
 
 private:
-    void drawTile(class QPainter& g, const QRectF& r, const QString& title,
+    static void drawTile(class QPainter& g, const QRectF& r, const QString& title,
                   const QString& big, const QString& sub, double pct, const QColor& accent);
 
     SensorSource* m_sensors = nullptr;

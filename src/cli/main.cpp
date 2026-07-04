@@ -51,7 +51,7 @@ int main(int argc, char** argv)
         std::printf("\nPassive read: %s\n", r.passiveNote.c_str());
         if (!r.passiveReport.empty()) {
             std::printf("  bytes:");
-            for (uint8_t b : r.passiveReport)
+            for (uint8_t const b : r.passiveReport)
                 std::printf(" %02X", b);
             std::putchar('\n');
         }

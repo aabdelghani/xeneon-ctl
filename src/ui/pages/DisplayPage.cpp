@@ -172,7 +172,7 @@ void DisplayPage::addSliderRow(QGridLayout* grid, int row, const QString& label,
         debounce->start();
     });
     connect(debounce, &QTimer::timeout, this, [this, slider, code] {
-        const quint16 v = static_cast<quint16>(slider->value());
+        const auto v = static_cast<quint16>(slider->value());
         m_ddc->setVcp(code, v);
         settings::saveVcp(code, v);
     });
@@ -211,7 +211,7 @@ void DisplayPage::onVcpRead(quint8 code, quint16 current, quint16 max)
     if (code == vcp::kPreset) {
         const int idx = m_preset->findData(current);
         if (idx >= 0) {
-            QSignalBlocker b(m_preset);
+            QSignalBlocker const b(m_preset);
             m_preset->setCurrentIndex(idx);
         }
         return;
@@ -222,7 +222,7 @@ void DisplayPage::onVcpRead(quint8 code, quint16 current, quint16 max)
     if (max > 0)
         it->slider->setMaximum(max);
     {
-        QSignalBlocker b(it->slider);
+        QSignalBlocker const b(it->slider);
         it->slider->setValue(current);
     }
     it->value->setText(QString::number(current));

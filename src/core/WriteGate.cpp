@@ -16,7 +16,7 @@ namespace {
 QString hex(const std::vector<uint8_t>& b)
 {
     QString s;
-    for (uint8_t x : b)
+    for (uint8_t const x : b)
         s += QString::asprintf("%02X ", x);
     return s.trimmed();
 }
@@ -44,7 +44,7 @@ Exchange WriteGate::exchange(const QString& hidrawPath, const BragiFrame& frame,
 {
     Exchange ex;
     ex.logPath = logFilePath();
-    ex.tx.assign(frame.data(), frame.data() + frame.size());
+    ex.tx.assign(frame.data(), frame.data() + xen::BragiFrame::size());
 
     if (conf.reason().isEmpty()) {
         ex.error = QStringLiteral("refused: no confirmation");
@@ -60,7 +60,7 @@ Exchange WriteGate::exchange(const QString& hidrawPath, const BragiFrame& frame,
     }
 
     append(QStringLiteral("TX [%1]  %2").arg(conf.reason(), hex(ex.tx)));
-    const int n = t.write(frame.data(), frame.size());
+    const int n = t.write(frame.data(), xen::BragiFrame::size());
     if (n < 0) {
         ex.error = QStringLiteral("write failed: %1").arg(QString::fromStdString(t.lastError()));
         append(QStringLiteral("TX-FAIL %1").arg(ex.error));

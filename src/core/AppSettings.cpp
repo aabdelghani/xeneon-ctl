@@ -7,8 +7,8 @@
 #include <QSettings>
 #include <QTextStream>
 
-namespace xen {
-namespace settings {
+
+namespace xen::settings {
 
 void saveTouchMode(int mode)
 {
@@ -33,7 +33,7 @@ QMap<int, int> loadVcps()
     s.beginGroup(QStringLiteral("ddc"));
     for (const QString& key : s.childKeys()) {
         bool ok = false;
-        const int code = key.mid(4).toInt(&ok, 16); // "vcp_XX"
+        const int code = QStringView{key}.mid(4).toInt(&ok, 16); // "vcp_XX"
         if (ok)
             out.insert(code, s.value(key).toInt());
     }
@@ -84,5 +84,5 @@ bool setAutostart(bool enabled, QString* errorOut)
     return true;
 }
 
-} // namespace settings
-} // namespace xen
+} // namespace xen::settings
+

@@ -7,8 +7,8 @@
 #include <QMap>
 #include <QString>
 
-namespace xen {
-namespace settings {
+
+namespace xen::settings {
 
 // Touch mode (stored as the TouchControl::Mode int value).
 void saveTouchMode(int mode);
@@ -23,5 +23,5 @@ QMap<int, int> loadVcps();
 bool autostartEnabled();
 bool setAutostart(bool enabled, QString* errorOut = nullptr);
 
-} // namespace settings
-} // namespace xen
+} // namespace xen::settings
+

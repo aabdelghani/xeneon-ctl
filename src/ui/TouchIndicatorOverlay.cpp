@@ -17,7 +17,7 @@ constexpr int kMaxAlpha = 51; // 20% of 255
 }
 
 TouchIndicatorOverlay::TouchIndicatorOverlay(QWidget* parent)
-    : QWidget(parent, Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool)
+    : QWidget(parent, Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::Tool), m_timer(new QTimer(this))
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
@@ -31,7 +31,7 @@ TouchIndicatorOverlay::TouchIndicatorOverlay(QWidget* parent)
     setStyleSheet(QStringLiteral("background: transparent;"));
 
     m_clock.start();
-    m_timer = new QTimer(this);
+    
     connect(m_timer, &QTimer::timeout, this, [this] {
         // Age released ripples and drop expired ones; repaint only if anything is live.
         bool live = false;
@@ -47,7 +47,7 @@ TouchIndicatorOverlay::TouchIndicatorOverlay(QWidget* parent)
                     live = true;
             }
         }
-        for (int k : dead)
+        for (int const k : dead)
             m_ripples.remove(k);
         if (live || !dead.isEmpty())
             update();

@@ -30,10 +30,10 @@ public:
 
     // Re-reads xinput and reports whether the touch devices move the pointer.
     State refresh();
-    State state() const { return m_state; }
-    QString detail() const { return m_detail; }
+    [[nodiscard]] State state() const { return m_state; }
+    [[nodiscard]] QString detail() const { return m_detail; }
 
-    Mode mode();                 // current mode from xinput topology
+    static Mode mode();                 // current mode from xinput topology
     bool setMode(Mode m);        // apply a mode
 
     // true => touch moves the pointer; false => touch is disabled.
@@ -41,26 +41,26 @@ public:
 
     // Coordinate Transformation Matrix (3x3, row-major) of the touch devices.
     // Returns the first device's matrix; identity on failure.
-    QList<double> matrix();
+    static QList<double> matrix();
     // Applies map-to-output DP-<edge> baseline (geometric mapping).
-    bool applyOutputMapping();
+    static bool applyOutputMapping();
     // Sets an explicit 3x3 matrix on all touch devices (for calibration).
-    bool setMatrix(const QList<double>& m);
+    static bool setMatrix(const QList<double>& m);
 
-    QList<int> touchDeviceIds() { return deviceIds(); }
+    static QList<int> touchDeviceIds() { return deviceIds(); }
 
 signals:
     void stateChanged(xen::TouchControl::State state, const QString& detail);
 
 private:
-    QList<int> deviceIds();       // xinput ids of "wch.cn TouchScreen" devices
-    bool deviceMovesPointer(int id);
-    int masterPointerId();        // "Virtual core pointer" id
-    int deviceMasterId(int id);   // master this slave is attached to (-1 floating)
-    int ensureEdgeMaster();       // id of "xeneon-edge pointer", creating if needed
-    void removeEdgeMasterIfEmpty();
-    QString edgeOutputName();     // xrandr output showing the 2560x720 Edge
-    bool isX11() const;
+    static QList<int> deviceIds();       // xinput ids of "wch.cn TouchScreen" devices
+    static bool deviceMovesPointer(int id);
+    static int masterPointerId();        // "Virtual core pointer" id
+    static int deviceMasterId(int id);   // master this slave is attached to (-1 floating)
+    static int ensureEdgeMaster();       // id of "xeneon-edge pointer", creating if needed
+    static void removeEdgeMasterIfEmpty();
+    static QString edgeOutputName();     // xrandr output showing the 2560x720 Edge
+    [[nodiscard]] static bool isX11() ;
 
     State m_state = State::Unknown;
     QString m_detail;

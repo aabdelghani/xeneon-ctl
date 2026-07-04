@@ -34,7 +34,7 @@ protected:
     void mousePressEvent(QMouseEvent* e) override;
 
 private:
-    void recordHit(const QPointF& localPos);
+    void recordHit(QPointF localPos);
     void solveAndApply();
 
     TouchControl* m_touch;
