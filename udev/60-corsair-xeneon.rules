@@ -1,0 +1,5 @@
+# Corsair Xeneon Edge (1b1c:1d0d) — grant the logged-in user access to the
+# vendor HID interface for xeneon-ctl.
+# Numbered 60-* so TAG+="uaccess" is processed before 73-seat-late.rules.
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1b1c", ATTRS{idProduct}=="1d0d", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1b1c", ATTRS{idProduct}=="1d0d", MODE="0660", TAG+="uaccess"
