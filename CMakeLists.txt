@@ -61,3 +61,52 @@ enable_testing()
 add_executable(xeneon_tests tests/test_proto.cpp)
 target_link_libraries(xeneon_tests PRIVATE xeneon_proto)
 add_test(NAME proto COMMAND xeneon_tests)
+
+# ---------------------------------------------------------------------------
+# Installation (for packaging: .deb, Flatpak, plain `make install`)
+# ---------------------------------------------------------------------------
+include(GNUInstallDirs)
+
+install(TARGETS xeneon-edge xeneonctl RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES packaging/xeneon-ctl.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+install(FILES packaging/io.github.aabdelghani.xeneon-ctl.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+
+install(FILES packaging/icons/xeneon-ctl.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+
+foreach(sz 16 24 32 48 64 128 256 512)
+    install(FILES packaging/icons/xeneon-ctl-${sz}.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${sz}x${sz}/apps
+            RENAME xeneon-ctl.png)
+endforeach()
+
+# The udev rule grants the logged-in user access to the Edge HID interface.
+install(FILES udev/60-corsair-xeneon.rules
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d)
+
+# ---------------------------------------------------------------------------
+# CPack: produce a Debian package (installable like Chrome's .deb)
+# ---------------------------------------------------------------------------
+set(CPACK_PACKAGE_NAME "xeneon-ctl")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_CONTACT "Ahmed Abdelghany <ahmedabdelghany15@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Native Linux control for the Corsair Xeneon Edge touchscreen")
+set(CPACK_PACKAGE_HOMEPAGE_URL
+    "https://github.com/aabdelghani/corsair-xeneon-edge-linux")
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "libqt6widgets6, libqt6core6, libhidapi-hidraw0, libx11-6, libxi6, ddcutil")
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "x11-xserver-utils")
+# Refresh the icon cache / desktop database after install/remove.
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/postinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/debian/postrm")
+set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+include(CPack)

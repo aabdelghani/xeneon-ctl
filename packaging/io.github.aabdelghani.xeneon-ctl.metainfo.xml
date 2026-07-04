@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.aabdelghani.xeneon-ctl</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Xeneon Edge Control</name>
+  <summary>Native Linux control for the Corsair Xeneon Edge touchscreen</summary>
+
+  <description>
+    <p>
+      Xeneon Edge Control gives Linux users real control over the CORSAIR XENEON
+      EDGE 14.5 inch LCD touchscreen, which otherwise has no official Linux
+      support (iCUE is Windows only and does not run under Wine).
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Brightness, contrast, sharpness, color presets and RGB gains over DDC/CI</li>
+      <li>Four touch modes, including a pointer free ripple indicator</li>
+      <li>Five point touch calibration</li>
+      <li>A fullscreen system dashboard on the Edge (clock, CPU, GPU, memory)</li>
+      <li>Reverse engineered, confirmation gated access to the device HID protocol</li>
+      <li>Remembers your settings and can reapply them at login</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">xeneon-ctl.desktop</launchable>
+  <url type="homepage">https://github.com/aabdelghani/corsair-xeneon-edge-linux</url>
+  <url type="bugtracker">https://github.com/aabdelghani/corsair-xeneon-edge-linux/issues</url>
+
+  <developer id="io.github.aabdelghani">
+    <name>Ahmed Abdelghany</name>
+  </developer>
+
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+  </categories>
+
+  <keywords>
+    <keyword>corsair</keyword>
+    <keyword>xeneon</keyword>
+    <keyword>touchscreen</keyword>
+    <keyword>monitor</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-07-04">
+      <description>
+        <p>First release: DDC display control, touch modes and calibration, HID recon, and the Edge dashboard.</p>
+      </description>
+    </release>
+  </releases>
+</component>

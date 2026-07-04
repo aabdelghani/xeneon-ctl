@@ -1,4 +1,8 @@
-# xeneon-ctl
+<p align="center">
+  <img src="packaging/icons/xeneon-ctl-256.png" alt="Xeneon Edge Control" width="128" height="128">
+</p>
+
+<h1 align="center">Xeneon Edge Control</h1>
 
 **Native Linux control for the CORSAIR XENEON EDGE 14.5" LCD touchscreen. No iCUE, no Windows, no cloud.**
 
@@ -77,44 +81,46 @@ The architecture keeps room for more CORSAIR devices, but the Edge is the focus 
 
 ## Install
 
-### Dependencies (Ubuntu / Debian)
+### Option A: the Debian package (recommended, Ubuntu / Debian)
+
+Download the latest `xeneon-ctl_*.deb` from [Releases](https://github.com/aabdelghani/corsair-xeneon-edge-linux/releases) and install it the same way you would install Chrome or VS Code:
 
 ```bash
-sudo apt install build-essential cmake qt6-base-dev libhidapi-dev \
-                 libx11-dev libxi-dev ddcutil
+sudo apt install ./xeneon-ctl_0.1.0_amd64.deb
 ```
 
-### Build
-
-```bash
-git clone https://github.com/aabdelghani/corsair-xeneon-edge-linux.git
-cd corsair-xeneon-edge-linux
-cmake -B build
-cmake --build build -j
-```
-
-### Grant HID access (one time)
-
-The device HID node is root only by default. Install the included udev rule so your user can reach it:
-
-```bash
-sudo cp udev/60-corsair-xeneon.rules /etc/udev/rules.d/
-sudo udevadm control --reload && sudo udevadm trigger
-```
-
-You also need to be in the `i2c` group for DDC/CI:
+This installs the `xeneon-edge` GUI and `xeneonctl` CLI, adds the app (with its icon) to your applications menu, and installs the udev rule so your user can reach the device. After installing, add yourself to the `i2c` group once for DDC brightness control:
 
 ```bash
 sudo usermod -aG i2c "$USER"   # then log out and back in
 ```
 
-### Run
+Then launch **Xeneon Edge Control** from your app grid, or run `xeneon-edge`.
+
+### Option B: build from source
 
 ```bash
+sudo apt install build-essential cmake qt6-base-dev libhidapi-dev \
+                 libx11-dev libxi-dev ddcutil
+git clone https://github.com/aabdelghani/corsair-xeneon-edge-linux.git
+cd corsair-xeneon-edge-linux
+cmake -B build && cmake --build build -j
+
+# grant device access
+sudo cp udev/60-corsair-xeneon.rules /etc/udev/rules.d/
+sudo udevadm control --reload && sudo udevadm trigger
+sudo usermod -aG i2c "$USER"    # then log out and back in
+
 ./build/xeneon-edge     # the GUI
 ./build/xeneonctl list  # quick CLI status
 ctest --test-dir build  # unit tests
 ```
+
+To build your own `.deb`: `cd build && cpack`.
+
+### App stores
+
+Once the `.deb` is installed, the app shows up in GNOME Software / the Ubuntu App Center under installed applications, with its icon and description (AppStream metadata is included). Publishing it as a browsable entry on Flathub or the Snap Store is on the roadmap; because the app talks directly to hardware (hidraw, i2c) and uses host tools (`xinput`, `ddcutil`, `nvidia-smi`), it needs a classic Snap or generous Flatpak permissions rather than a standard sandbox.
 
 ## How it works
 

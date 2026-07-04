@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+# Refresh desktop database and icon cache so the app appears immediately.
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+fi
+
+# Reload udev so the Edge HID node becomes accessible without a reboot.
+if command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules || true
+    udevadm trigger --subsystem-match=hidraw || true
+fi
+
+echo "xeneon-ctl installed. Note: for DDC brightness control add yourself to the i2c group:"
+echo "  sudo usermod -aG i2c \"\$USER\"   (then log out and back in)"
+
+exit 0
