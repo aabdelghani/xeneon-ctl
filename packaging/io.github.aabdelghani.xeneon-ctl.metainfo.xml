@@ -46,6 +46,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.2.0" date="2026-07-04">
+      <description>
+        <p>Close-to-tray with a system tray icon, a dashboard open/close toggle, and a full static-analysis cleanup (clean under -Wall/-Wextra, cppcheck, clang-tidy and clazy) with hot-path performance improvements.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-07-04">
       <description>
         <p>First release: DDC display control, touch modes and calibration, HID recon, and the Edge dashboard.</p>

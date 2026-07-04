@@ -86,7 +86,7 @@ The architecture keeps room for more CORSAIR devices, but the Edge is the focus 
 Download the latest `xeneon-ctl_*.deb` from [Releases](https://github.com/aabdelghani/corsair-xeneon-edge-linux/releases) and install it the same way you would install Chrome or VS Code:
 
 ```bash
-sudo apt install ./xeneon-ctl_0.1.0_amd64.deb
+sudo apt install ./xeneon-ctl_0.2.0_amd64.deb
 ```
 
 This installs the `xeneon-edge` GUI and `xeneonctl` CLI, adds the app (with its icon) to your applications menu, and installs the udev rule so your user can reach the device. After installing, add yourself to the `i2c` group once for DDC brightness control:
