@@ -76,7 +76,7 @@ sudo apt install build-essential cmake qt6-base-dev libhidapi-dev \
 ### Build
 
 ```bash
-git clone https://github.com/aabdelghany/xeneon-ctl.git
+git clone https://github.com/aabdelghani/xeneon-ctl.git
 cd xeneon-ctl
 cmake -B build
 cmake --build build -j
@@ -141,7 +141,7 @@ This project treats your hardware with respect:
 
 ## Credits and license
 
-Created by [Ahmed Abdelghany](https://github.com/aabdelghany) because CORSAIR does not support the Xeneon Edge on Linux and someone had to.
+Created by [Ahmed Abdelghany](https://github.com/aabdelghani) because CORSAIR does not support the Xeneon Edge on Linux and someone had to.
 
 Licensed under **GPL-3.0**. Protocol knowledge cross referenced from the excellent [OpenRGB](https://gitlab.com/CalcProgrammer1/OpenRGB) and [OpenLinkHub](https://github.com/jurkovic-nikola/OpenLinkHub) projects.
 
