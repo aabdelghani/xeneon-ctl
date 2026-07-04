@@ -49,6 +49,17 @@ The Edge speaks CORSAIR's modern "Bragi" / Protocol V2 over a vendor HID interfa
 - Every transfer is logged to `~/.local/share/xeneon-ctl/hid.log` for full transparency.
 - The read only "Probe" console decodes the device report descriptor and reads device info directly over HID. On my unit that returns `SM32,01,SC,SQ,Coruscant LCD,V1.00.20` (firmware V1.00.20, internal codename "Coruscant LCD").
 
+### A system dashboard on the Edge
+Turn the Edge into a glanceable status panel. One click renders a fullscreen dashboard on the touchscreen with a large clock and live CPU, GPU, and memory tiles, updated every second.
+
+![Dashboard on the Edge: clock plus CPU, GPU and memory tiles](docs/dashboard.png)
+
+- Clock and date, with a big readable face sized for the 2560x720 panel
+- CPU load and temperature (from `/proc/stat` and hwmon)
+- GPU utilization, temperature, and memory (from `nvidia-smi`)
+- Memory used and total
+- Accent-colored usage bars, dark theme, Esc to close
+
 ### A dark, native interface
 A clean Qt6 Widgets UI with a dark theme, laid out for quick access. No Electron, no web stack, no background telemetry.
 
@@ -134,10 +145,10 @@ This project treats your hardware with respect:
 
 ## Roadmap
 
-- A dashboard mode that renders system stats (CPU, GPU, RAM, clock) fullscreen on the Edge
 - Saved profiles and restore on login
-- Tray icon and autostart
+- Tray icon and autostart, so the Indicator touch mode and DDC settings survive a reboot
 - More of the HID feature surface as the protocol map grows
+- Customizable dashboard tiles and layouts
 
 ## Credits and license
 

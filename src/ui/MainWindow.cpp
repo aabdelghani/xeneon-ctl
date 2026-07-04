@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/MainWindow.h"
 
+#include "ui/dashboard/DashboardWindow.h"
 #include "ui/pages/DevicePage.h"
 #include "ui/pages/DisplayPage.h"
 #include "ui/pages/ProbePage.h"
+
+#include <QGuiApplication>
+#include <QScreen>
 
 #include <QButtonGroup>
 #include <QFormLayout>
@@ -168,9 +172,33 @@ QWidget* MainWindow::buildHomePage()
     addRow(tr("HID access"), m_valAccess);
     cardLay->addLayout(form);
 
+    cardLay->addSpacing(14);
+    auto* dashBtn = new QPushButton(tr("Open dashboard on the Edge"), card);
+    dashBtn->setObjectName(QStringLiteral("actionButton"));
+    dashBtn->setCursor(Qt::PointingHandCursor);
+    connect(dashBtn, &QPushButton::clicked, this, &MainWindow::openDashboard);
+    cardLay->addWidget(dashBtn, 0, Qt::AlignLeft);
+
     lay->addWidget(card);
     lay->addStretch(1);
     return page;
+}
+
+void MainWindow::openDashboard()
+{
+    QScreen* edge = nullptr;
+    for (QScreen* s : QGuiApplication::screens()) {
+        const QSize sz = s->geometry().size();
+        if (sz.width() == 2560 && sz.height() == 720) {
+            edge = s;
+            break;
+        }
+    }
+    if (!edge)
+        edge = screen();
+    auto* dash = new DashboardWindow;
+    dash->setAttribute(Qt::WA_DeleteOnClose);
+    dash->showOnScreen(edge);
 }
 
 QWidget* MainWindow::buildPlaceholderPage(const QString& title, const QString& note)

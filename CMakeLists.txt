@@ -29,6 +29,7 @@ target_link_libraries(xeneon_transport PUBLIC xeneon_proto PkgConfig::HIDAPI)
 add_library(xeneon_core STATIC
     src/core/DdcClient.cpp
     src/core/EdgeDevice.cpp
+    src/core/SensorSource.cpp
     src/core/TouchControl.cpp
     src/core/WriteGate.cpp
     src/x11/TouchEventSource.cpp
@@ -46,6 +47,7 @@ add_executable(xeneon-edge
     src/ui/CalibrationOverlay.cpp
     src/ui/TouchIndicatorOverlay.cpp
     src/ui/TouchOverlay.cpp
+    src/ui/dashboard/DashboardWindow.cpp
     src/ui/pages/DevicePage.cpp
     src/ui/pages/DisplayPage.cpp
     src/ui/pages/ProbePage.cpp

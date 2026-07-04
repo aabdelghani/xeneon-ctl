@@ -18,6 +18,7 @@ public:
 
 private slots:
     void onDeviceState(const xen::EdgeDevice::State& s);
+    void openDashboard();
 
 private:
     QWidget* buildSidebar();
