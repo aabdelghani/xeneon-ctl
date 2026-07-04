@@ -7,10 +7,14 @@
 
 #include <QLabel>
 #include <QMainWindow>
+#include <QPointer>
+#include <QPushButton>
 #include <QStackedWidget>
 #include <QSystemTrayIcon>
 
 namespace xen {
+
+class DashboardWindow;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -43,6 +47,9 @@ private:
     QLabel* m_valSerial = nullptr;
     QLabel* m_valPath = nullptr;
     QLabel* m_valAccess = nullptr;
+
+    QPushButton* m_dashBtn = nullptr;
+    QPointer<DashboardWindow> m_dash;
 };
 
 } // namespace xen

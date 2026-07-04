@@ -55,6 +55,8 @@ void DashboardWindow::showOnScreen(QScreen* screen)
     setGeometry(screen->geometry());
     showFullScreen();
     raise();
+    activateWindow();
+    setFocus(); // so Esc reaches keyPressEvent
 
     const QDateTime now = QDateTime::currentDateTime();
     m_time = now.toString(QStringLiteral("HH:mm"));
@@ -207,7 +209,7 @@ void DashboardWindow::paintEvent(QPaintEvent*)
     g.setFont(f);
     g.setPen(QColor(255, 255, 255, 60));
     g.drawText(rect().adjusted(0, 0, -14, -8), Qt::AlignRight | Qt::AlignBottom,
-               QStringLiteral("Esc to close"));
+               QStringLiteral("Press Esc, or use the app button, to close"));
     Q_UNUSED(kAccentViolet);
 }
 

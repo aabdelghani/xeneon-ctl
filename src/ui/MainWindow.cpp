@@ -179,11 +179,11 @@ QWidget* MainWindow::buildHomePage()
     cardLay->addLayout(form);
 
     cardLay->addSpacing(14);
-    auto* dashBtn = new QPushButton(tr("Open dashboard on the Edge"), card);
-    dashBtn->setObjectName(QStringLiteral("actionButton"));
-    dashBtn->setCursor(Qt::PointingHandCursor);
-    connect(dashBtn, &QPushButton::clicked, this, &MainWindow::openDashboard);
-    cardLay->addWidget(dashBtn, 0, Qt::AlignLeft);
+    m_dashBtn = new QPushButton(tr("Open dashboard on the Edge"), card);
+    m_dashBtn->setObjectName(QStringLiteral("actionButton"));
+    m_dashBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_dashBtn, &QPushButton::clicked, this, &MainWindow::openDashboard);
+    cardLay->addWidget(m_dashBtn, 0, Qt::AlignLeft);
 
     lay->addWidget(card);
     lay->addStretch(1);
@@ -241,6 +241,13 @@ void MainWindow::setupTray()
 
 void MainWindow::openDashboard()
 {
+    // The button toggles: if the dashboard is open, close it; otherwise open it.
+    // Esc on the dashboard also closes it (see DashboardWindow::keyPressEvent).
+    if (m_dash) {
+        m_dash->close(); // WA_DeleteOnClose -> destroyed() restores the button
+        return;
+    }
+
     QScreen* edge = nullptr;
     for (QScreen* s : QGuiApplication::screens()) {
         const QSize sz = s->geometry().size();
@@ -251,9 +258,20 @@ void MainWindow::openDashboard()
     }
     if (!edge)
         edge = screen();
-    auto* dash = new DashboardWindow;
-    dash->setAttribute(Qt::WA_DeleteOnClose);
-    dash->showOnScreen(edge);
+
+    m_dash = new DashboardWindow;
+    m_dash->setAttribute(Qt::WA_DeleteOnClose);
+
+    // Flip the button to a "Close" action while the dashboard is open, and back
+    // to "Open" when it is closed (by this button or by Esc).
+    if (m_dashBtn)
+        m_dashBtn->setText(tr("Close dashboard on the Edge"));
+    connect(m_dash, &QObject::destroyed, this, [this] {
+        if (m_dashBtn)
+            m_dashBtn->setText(tr("Open dashboard on the Edge"));
+    });
+
+    m_dash->showOnScreen(edge);
 }
 
 QWidget* MainWindow::buildPlaceholderPage(const QString& title, const QString& note)
